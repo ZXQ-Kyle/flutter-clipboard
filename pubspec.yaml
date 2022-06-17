@@ -21,12 +21,19 @@ dependencies:
   window_manager: ^0.2.5
   keypress_simulator: ^0.1.0
 
+  #数据库
+  hive: ^2.0.4
+  hive_flutter: ^1.1.0
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^2.0.0
+  #数据库
+  hive_generator: ^1.1.1
+  build_runner: ^2.1.5
 
 flutter:
 

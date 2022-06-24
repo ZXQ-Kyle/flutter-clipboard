@@ -1,4 +1,5 @@
 import 'package:clipboard/clipboard.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keypress_simulator/keypress_simulator.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
@@ -13,17 +14,25 @@ const dbKeyAll = 'all';
 const dbKeyCollect = 'collect';
 
 class HomeLogic extends GetxController with ClipboardListener {
+  late List<String> totalList;
   late List<String> list;
   late List<String> collectList;
   bool _ignoreReSort = false;
   final tabs = ['全部', '收藏'];
   late Box<dynamic> box;
 
+  var controller = TextEditingController();
+
   @override
   void onInit() async {
     super.onInit();
+    // RawKeyboard.instance.addListener((rawKeyEvent) {
+    //   logger.wtf(rawKeyEvent);
+    // });
+
     box = Hive.box(hiveBoxApp);
     list = box.get(dbKeyAll, defaultValue: <String>[]);
+    totalList = list;
     collectList = box.get(dbKeyCollect, defaultValue: <String>[]);
 
     var accessAllowed = await keyPressSimulator.isAccessAllowed();
@@ -38,19 +47,40 @@ class HomeLogic extends GetxController with ClipboardListener {
       // 设置热键范围（默认为 HotKeyScope.system）
       scope: HotKeyScope.system, // 设置为应用范围的热键。
     );
-    await hotKeyManager.register(
+    hotKeyManager.register(
       hotKey,
-      keyDownHandler: (hotKey) {
-        logger.wtf('onKeyDown+${hotKey.toJson()}');
-      },
-      // 只在 macOS 上工作。
-      keyUpHandler: (hotKey) async {
-        logger.wtf('onKeyUp+${hotKey.toJson()}');
+      keyDownHandler: (hotKey) async {
         if (await windowManager.isFocused()) {
           windowManager.hide();
         } else {
           windowManager.show();
         }
+      },
+      // 只在 macOS 上工作。
+      keyUpHandler: (hotKey) async {},
+    );
+    final HotKey hotKeyEnter = HotKey(
+      KeyCode.enter,
+      modifiers: [],
+      // 设置热键范围（默认为 HotKeyScope.system）
+      scope: HotKeyScope.inapp, // 设置为应用范围的热键。
+    );
+    hotKeyManager.register(
+      hotKeyEnter,
+      keyDownHandler: (hotKey) {
+        search();
+      },
+    );
+    final HotKey hotKeyEsc = HotKey(
+      KeyCode.escape,
+      modifiers: [],
+      // 设置热键范围（默认为 HotKeyScope.system）
+      scope: HotKeyScope.inapp, // 设置为应用范围的热键。
+    );
+    hotKeyManager.register(
+      hotKeyEsc,
+      keyDownHandler: (hotKey) {
+        clear();
       },
     );
 
@@ -77,9 +107,7 @@ class HomeLogic extends GetxController with ClipboardListener {
     for (int i = 0; i < keyList.length; i++) {
       hotKeyManager.register(
         keyList[i],
-        keyDownHandler: (hotKey) {},
-        // 只在 macOS 上工作。
-        keyUpHandler: (hotKey) async {
+        keyDownHandler: (hotKey) async {
           _ignoreReSort = true;
           await FlutterClipboard.controlC(list[i]);
           paste();
@@ -103,9 +131,9 @@ class HomeLogic extends GetxController with ClipboardListener {
     ClipboardData? newClipboardData = await Clipboard.getData(Clipboard.kTextPlain);
     var message = newClipboardData?.text?.trim() ?? "";
     if (message != '') {
-      var indexOf = list.indexOf(message);
+      var indexOf = totalList.indexOf(message);
       if (indexOf == -1) {
-        list.insert(0, message);
+        totalList.insert(0, message);
       } else if (indexOf == 0) {
         return;
       } else {
@@ -113,11 +141,11 @@ class HomeLogic extends GetxController with ClipboardListener {
           return;
         }
         _ignoreReSort = false;
-        list.removeAt(indexOf);
-        list.insert(0, message);
+        totalList.removeAt(indexOf);
+        totalList.insert(0, message);
       }
       update([tabs[0]]);
-      box.put(dbKeyAll, list);
+      box.put(dbKeyAll, totalList);
     }
   }
 
@@ -152,5 +180,22 @@ class HomeLogic extends GetxController with ClipboardListener {
     update([tabs[1]]);
     showToast('移除成功');
     box.put(dbKeyCollect, collectList);
+  }
+
+  void search() {
+    var text = controller.text;
+    if (text == '') {
+      return;
+    }
+    list = totalList.where((element) {
+      return element.contains(text);
+    }).toList();
+    update([tabs[0]]);
+  }
+
+  void clear() {
+    controller.text = '';
+    list = totalList;
+    update([tabs[0]]);
   }
 }

@@ -1,5 +1,7 @@
+import 'package:clipboard_client/main.dart';
 import 'package:clipboard_client/page/window_listener.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:clipboard/clipboard.dart';
 import 'package:oktoast/oktoast.dart';
@@ -32,6 +34,31 @@ class HomePage extends StatelessWidget {
                 tabs: tabs.map((e) => Tab(text: e)).toList(growable: false),
               ),
             ),
+            actions: [
+              Container(
+                width: 220,
+                height: 40,
+                padding: const EdgeInsets.only(left: 16, right: 4),
+                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: TextField(
+                  controller: logic.controller,
+                  decoration: InputDecoration(
+                    hintText: "搜索文本",
+                    suffixIcon: InkWell(
+                      onTap: () {
+                        logic.clear();
+                      },
+                      child: Icon(Icons.clear),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ],
           ),
           body: TabBarView(children: [
             GetBuilder<HomeLogic>(
@@ -88,6 +115,7 @@ class HomePage extends StatelessWidget {
                               FlutterClipboard.controlC(e);
                               showToast('已复制');
                               windowManager.hide();
+                              logic.paste();
                             },
                             child: Container(
                               width: double.infinity,
